@@ -1,0 +1,26 @@
+services:
+  sub2api-fast-proxy:
+    image: ${IMAGE:-ghcr.io/akuma-real/sub2api-fast-proxy:latest}
+    container_name: sub2api-fast-proxy
+    restart: unless-stopped
+    environment:
+      LISTEN_ADDR: :8787
+      UPSTREAM_URL: ${UPSTREAM_URL:-https://api.291024.xyz}
+      FORCE_SERVICE_TIER: ${FORCE_SERVICE_TIER:-priority}
+      STRICT_INJECTION: ${STRICT_INJECTION:-true}
+      MAX_BODY_BYTES: ${MAX_BODY_BYTES:-256mb}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-8787}:8787"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/sub2api-fast-proxy",
+          "-healthcheck"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
