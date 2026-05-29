@@ -38,6 +38,8 @@ curl http://127.0.0.1:8787/v1/responses \
 | --- | --- | --- |
 | `LISTEN_ADDR` | `:8787` | 监听地址 |
 | `UPSTREAM_URL` | `https://api.291024.xyz` | Sub2API 上游地址 |
+| `UPSTREAM_HOST_HEADER` | 空 | 可选：转发给上游的 `Host`，适合用固定 IP 直连但保留域名路由 |
+| `UPSTREAM_TLS_SERVER_NAME` | 空 | 可选：连接 HTTPS 固定 IP 时使用的 TLS SNI |
 | `FORCE_SERVICE_TIER` | `priority` | 强制写入的 OpenAI `service_tier`；`fast` 会被归一化为 `priority` |
 | `OPENAI_JSON_PATHS` | `/v1/responses,/v1/chat/completions,/v1/completions` | 需要注入 JSON body 的路径 |
 | `ANTHROPIC_FAST_PATHS` | `/v1/messages` | 需要追加 Anthropic fast beta 的路径 |
@@ -91,8 +93,18 @@ docker compose ps
 ```dotenv
 IMAGE=ghcr.io/akuma-real/sub2api-fast-proxy:latest
 UPSTREAM_URL=https://api.291024.xyz
+UPSTREAM_HOST_HEADER=
+UPSTREAM_TLS_SERVER_NAME=
 BIND_ADDR=127.0.0.1
 HOST_PORT=8787
+```
+
+如果上游域名在容器内 DNS 不稳定，或者希望直连后端 IP，可以这样配置：
+
+```dotenv
+UPSTREAM_URL=https://149.104.5.18
+UPSTREAM_HOST_HEADER=www.ggapi.cc
+UPSTREAM_TLS_SERVER_NAME=www.ggapi.cc
 ```
 
 只暴露 `127.0.0.1:8787`，公网入口交给 Caddy。

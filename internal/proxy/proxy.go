@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,11 +41,20 @@ func NewHandler(cfg Config, logger *slog.Logger) http.Handler {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
+	if cfg.UpstreamTLSSNI != "" {
+		transport.TLSClientConfig = &tls.Config{
+			ServerName: cfg.UpstreamTLSSNI,
+			MinVersion: tls.VersionTLS12,
+		}
+	}
 
 	rp := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.SetURL(cfg.UpstreamURL)
 			pr.Out.Host = cfg.UpstreamURL.Host
+			if cfg.UpstreamHostHeader != "" {
+				pr.Out.Host = cfg.UpstreamHostHeader
+			}
 			pr.SetXForwarded()
 			pr.Out.Header.Set("X-Sub2API-Fast-Proxy", "1")
 		},

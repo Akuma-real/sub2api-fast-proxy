@@ -92,6 +92,30 @@ func TestProxyAddsAnthropicFastBeta(t *testing.T) {
 	}
 }
 
+func TestProxyUsesConfiguredUpstreamHostHeader(t *testing.T) {
+	var capturedHost string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedHost = r.Host
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer upstream.Close()
+
+	cfg := testConfig(t, upstream.URL)
+	cfg.UpstreamHostHeader = "www.ggapi.cc"
+	handler := NewHandler(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"gpt-5.5","input":[]}`))
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", rec.Code, rec.Body.String())
+	}
+	if capturedHost != "www.ggapi.cc" {
+		t.Fatalf("upstream Host = %q, want www.ggapi.cc", capturedHost)
+	}
+}
+
 func TestProxyRejectsInvalidJSONOnForcedPath(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("upstream should not be called")

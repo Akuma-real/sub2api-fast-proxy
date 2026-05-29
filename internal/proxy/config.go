@@ -22,6 +22,8 @@ const (
 type Config struct {
 	ListenAddr         string
 	UpstreamURL        *url.URL
+	UpstreamHostHeader string
+	UpstreamTLSSNI     string
 	ForceServiceTier   string
 	OpenAIJSONPaths    map[string]struct{}
 	AnthropicFastPaths map[string]struct{}
@@ -62,6 +64,8 @@ func LoadConfigFromEnv() (Config, error) {
 	return Config{
 		ListenAddr:         envString("LISTEN_ADDR", defaultListenAddr),
 		UpstreamURL:        upstream,
+		UpstreamHostHeader: envString("UPSTREAM_HOST_HEADER", ""),
+		UpstreamTLSSNI:     envString("UPSTREAM_TLS_SERVER_NAME", ""),
 		ForceServiceTier:   tier,
 		OpenAIJSONPaths:    parsePathSet(envString("OPENAI_JSON_PATHS", defaultOpenAIJSONPaths)),
 		AnthropicFastPaths: parsePathSet(envString("ANTHROPIC_FAST_PATHS", defaultAnthropicFastPaths)),

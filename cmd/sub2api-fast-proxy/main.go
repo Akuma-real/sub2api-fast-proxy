@@ -50,6 +50,8 @@ func main() {
 		logger.Info("sub2api fast proxy started",
 			"listen", cfg.ListenAddr,
 			"upstream", cfg.UpstreamURL.String(),
+			"upstream_host_header", cfg.UpstreamHostHeader,
+			"upstream_tls_server_name", cfg.UpstreamTLSSNI,
 			"service_tier", cfg.ForceServiceTier,
 			"max_body_bytes", cfg.MaxBodyBytes,
 		)
