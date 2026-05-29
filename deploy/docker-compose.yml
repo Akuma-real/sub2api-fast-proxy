@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       LISTEN_ADDR: :8787
-      UPSTREAM_URL: ${UPSTREAM_URL:-https://api.291024.xyz}
+      UPSTREAM_URL: ${UPSTREAM_URL:?UPSTREAM_URL is required}
       UPSTREAM_HOST_HEADER: ${UPSTREAM_HOST_HEADER:-}
       UPSTREAM_TLS_SERVER_NAME: ${UPSTREAM_TLS_SERVER_NAME:-}
       FORCE_SERVICE_TIER: ${FORCE_SERVICE_TIER:-priority}
@@ -15,6 +15,8 @@ services:
       LOG_FORMAT: ${LOG_FORMAT:-json}
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-8787}:8787"
+    mem_limit: ${MEM_LIMIT:-512m}
+    mem_reservation: ${MEM_RESERVATION:-128m}
     healthcheck:
       test:
         [

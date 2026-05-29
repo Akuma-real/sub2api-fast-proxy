@@ -11,7 +11,6 @@ import (
 
 const (
 	defaultListenAddr               = ":8787"
-	defaultUpstreamURL              = "https://api.291024.xyz"
 	defaultForceServiceTier         = "priority"
 	defaultAnthropicFastBeta        = "fast-mode-2026-02-01"
 	defaultOpenAIJSONPaths          = "/v1/responses,/v1/chat/completions,/v1/completions"
@@ -36,7 +35,10 @@ type Config struct {
 }
 
 func LoadConfigFromEnv() (Config, error) {
-	rawUpstream := envString("UPSTREAM_URL", defaultUpstreamURL)
+	rawUpstream := envString("UPSTREAM_URL", "")
+	if rawUpstream == "" {
+		return Config{}, fmt.Errorf("UPSTREAM_URL is required")
+	}
 	upstream, err := url.Parse(rawUpstream)
 	if err != nil {
 		return Config{}, fmt.Errorf("parse UPSTREAM_URL: %w", err)

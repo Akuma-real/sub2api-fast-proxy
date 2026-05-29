@@ -51,6 +51,14 @@ func TestForceTopLevelStringPropertyReplacesOnlyTopLevelKey(t *testing.T) {
 	}
 }
 
+func TestForceTopLevelStringPropertyRejectsDuplicateTopLevelKey(t *testing.T) {
+	body := []byte(`{"service_tier":"auto","model":"gpt-5.5","service_tier":"default"}`)
+	_, _, err := forceTopLevelStringProperty(body, "service_tier", "priority")
+	if err == nil {
+		t.Fatalf("expected duplicate top-level service_tier error")
+	}
+}
+
 func TestForceTopLevelStringPropertyHandlesEmptyObject(t *testing.T) {
 	got, _, err := forceTopLevelStringProperty([]byte("{\n  }"), "service_tier", "priority")
 	if err != nil {

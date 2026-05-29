@@ -133,6 +133,45 @@ func TestProxyRejectsInvalidJSONOnForcedPath(t *testing.T) {
 	}
 }
 
+func TestProxyRejectsDuplicateServiceTierOnForcedPath(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("upstream should not be called")
+	}))
+	defer upstream.Close()
+
+	handler := NewHandler(testConfig(t, upstream.URL), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	body := `{"service_tier":"auto","model":"gpt-5.5","service_tier":"default"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestLoadConfigRequiresExplicitUpstreamURL(t *testing.T) {
+	t.Setenv("UPSTREAM_URL", "")
+
+	_, err := LoadConfigFromEnv()
+	if err == nil {
+		t.Fatalf("expected UPSTREAM_URL required error")
+	}
+}
+
+func TestLoadConfigUsesExplicitUpstreamURL(t *testing.T) {
+	t.Setenv("UPSTREAM_URL", "http://sub2api:8080")
+
+	cfg, err := LoadConfigFromEnv()
+	if err != nil {
+		t.Fatalf("LoadConfigFromEnv returned error: %v", err)
+	}
+	if cfg.UpstreamURL.String() != "http://sub2api:8080" {
+		t.Fatalf("upstream = %q", cfg.UpstreamURL.String())
+	}
+}
+
 func testConfig(t *testing.T, rawURL string) Config {
 	t.Helper()
 	parsed, err := url.Parse(rawURL)

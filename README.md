@@ -4,9 +4,10 @@
 
 默认行为：
 
-- 上游：`https://api.291024.xyz`
+- 上游：必须通过 `UPSTREAM_URL` 显式配置
 - 监听：`:8787`
 - 对 `/v1/responses`、`/v1/chat/completions`、`/v1/completions` 的 JSON body 强制写入 `service_tier: "priority"`
+- 如果请求存在重复的顶层 `service_tier`，直接拒绝请求，避免后写字段绕过 fast
 - 对 `/v1/messages` 自动追加 `anthropic-beta: fast-mode-2026-02-01`
 - 保留用户原始 `Authorization`、SSE/streaming 响应和 WebSocket upgrade
 
@@ -14,7 +15,7 @@
 
 ```bash
 cd ~/github/sub2api-fast-proxy
-go run ./cmd/sub2api-fast-proxy
+UPSTREAM_URL=http://127.0.0.1:8080 go run ./cmd/sub2api-fast-proxy
 ```
 
 健康检查：
@@ -37,7 +38,7 @@ curl http://127.0.0.1:8787/v1/responses \
 | 环境变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `LISTEN_ADDR` | `:8787` | 监听地址 |
-| `UPSTREAM_URL` | `https://api.291024.xyz` | Sub2API 上游地址 |
+| `UPSTREAM_URL` | 必填 | Sub2API 上游地址 |
 | `UPSTREAM_HOST_HEADER` | 空 | 可选：转发给上游的 `Host`，适合用固定 IP 直连但保留域名路由 |
 | `UPSTREAM_TLS_SERVER_NAME` | 空 | 可选：连接 HTTPS 固定 IP 时使用的 TLS SNI |
 | `FORCE_SERVICE_TIER` | `priority` | 强制写入的 OpenAI `service_tier`；`fast` 会被归一化为 `priority` |
@@ -62,7 +63,10 @@ CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/sub2api-fast-proxy ./cm
 
 ```bash
 docker build -t sub2api-fast-proxy:test .
-docker run --rm -p 127.0.0.1:8787:8787 sub2api-fast-proxy:test
+docker run --rm -p 127.0.0.1:8787:8787 \
+  --add-host host.docker.internal:host-gateway \
+  -e UPSTREAM_URL=http://host.docker.internal:8080 \
+  sub2api-fast-proxy:test
 ```
 
 ## GHCR 发布
@@ -92,19 +96,21 @@ docker compose ps
 
 ```dotenv
 IMAGE=ghcr.io/akuma-real/sub2api-fast-proxy:latest
-UPSTREAM_URL=https://api.291024.xyz
+UPSTREAM_URL=http://sub2api:8080
 UPSTREAM_HOST_HEADER=
 UPSTREAM_TLS_SERVER_NAME=
 BIND_ADDR=127.0.0.1
 HOST_PORT=8787
+MEM_LIMIT=512m
+MEM_RESERVATION=128m
 ```
 
 如果上游域名在容器内 DNS 不稳定，或者希望直连后端 IP，可以这样配置：
 
 ```dotenv
 UPSTREAM_URL=https://149.104.5.18
-UPSTREAM_HOST_HEADER=www.ggapi.cc
-UPSTREAM_TLS_SERVER_NAME=www.ggapi.cc
+UPSTREAM_HOST_HEADER=sub.ggapi.cc
+UPSTREAM_TLS_SERVER_NAME=sub.ggapi.cc
 ```
 
 只暴露 `127.0.0.1:8787`，公网入口交给 Caddy。

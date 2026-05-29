@@ -22,6 +22,8 @@ func forceTopLevelStringProperty(body []byte, key, value string) ([]byte, bool, 
 
 	i := start + 1
 	hasFields := false
+	targetValueStart := -1
+	targetValueEnd := -1
 	for {
 		i = skipSpaces(body, i, end)
 		if i >= end {
@@ -30,6 +32,9 @@ func forceTopLevelStringProperty(body []byte, key, value string) ([]byte, bool, 
 		if body[i] == '}' {
 			if i != end-1 {
 				return body, false, fmt.Errorf("unexpected bytes after JSON object")
+			}
+			if targetValueStart >= 0 {
+				return replaceRange(body, targetValueStart, targetValueEnd, quoteJSONString(value)), true, nil
 			}
 			insertPos := trimSpaceBackward(body, start+1, i)
 			field := quoteJSONField(key, value)
@@ -67,12 +72,11 @@ func forceTopLevelStringProperty(body []byte, key, value string) ([]byte, bool, 
 		}
 
 		if parsedKey == key {
-			quoted := quoteJSONString(value)
-			out := make([]byte, 0, len(body)-valueEnd+valueStart+len(quoted))
-			out = append(out, body[:valueStart]...)
-			out = append(out, quoted...)
-			out = append(out, body[valueEnd:]...)
-			return out, true, nil
+			if targetValueStart >= 0 {
+				return body, false, fmt.Errorf("duplicate top-level %q is not allowed", key)
+			}
+			targetValueStart = valueStart
+			targetValueEnd = valueEnd
 		}
 
 		hasFields = true
@@ -87,6 +91,9 @@ func forceTopLevelStringProperty(body []byte, key, value string) ([]byte, bool, 
 			if i != end-1 {
 				return body, false, fmt.Errorf("unexpected bytes after JSON object")
 			}
+			if targetValueStart >= 0 {
+				return replaceRange(body, targetValueStart, targetValueEnd, quoteJSONString(value)), true, nil
+			}
 			insertPos := trimSpaceBackward(body, start+1, i)
 			field := append([]byte{','}, quoteJSONField(key, value)...)
 			out := make([]byte, 0, len(body)+len(field))
@@ -98,6 +105,14 @@ func forceTopLevelStringProperty(body []byte, key, value string) ([]byte, bool, 
 			return body, false, fmt.Errorf("expected ',' or '}' after key %q", parsedKey)
 		}
 	}
+}
+
+func replaceRange(body []byte, start, end int, replacement []byte) []byte {
+	out := make([]byte, 0, len(body)-end+start+len(replacement))
+	out = append(out, body[:start]...)
+	out = append(out, replacement...)
+	out = append(out, body[end:]...)
+	return out
 }
 
 func quoteJSONField(key, value string) []byte {
